@@ -317,7 +317,58 @@ class LEDStripApp:
         strip.fill((0, 0, 0))
         strip.show()
 
+    def pulse_pattern(self, strip, color, brightness, speed, duration):
+        r, g, b = self.hex_to_rgb(color)
+        r, g, b = int(r * brightness), int(g * brightness), int(b * brightness)
+        pulse_steps = 100
+        step_delay = duration / pulse_steps
+        for step in range(pulse_steps):
+            intensity = int(255 * abs(0.5 - (step / pulse_steps)))
+            color_step = (intensity, intensity, intensity)
+            strip.fill(color_step)
+            strip.show()
+            time.sleep(step_delay)
+        strip.fill((0, 0, 0))
+        strip.show()
 
+    def rainbow_pattern(self, strip, speed, duration):
+        end_time = time.time() + duration
+        while time.time() < end_time:
+            for i in range(256):
+                for j in range(len(strip)):
+                    color = wheel((i + j) & 255)
+                    strip[j] = color
+                strip.show()
+                time.sleep(1 / speed)
+        strip.fill((0, 0, 0))
+        strip.show()
+
+    def color_wave_pattern(self, strip, speed, duration):
+        end_time = time.time() + duration
+        while time.time() < end_time:
+            for i in range(256):
+                for j in range(len(strip)):
+                    color = wheel((i + j) % 255)
+                    strip[j] = color
+                strip.show()
+                time.sleep(1 / speed)
+        strip.fill((0, 0, 0))
+        strip.show()
+
+    def starfield_pattern(self, strip, speed, duration):
+        end_time = time.time() + duration
+        while time.time() < end_time:
+            for i in range(len(strip)):
+                strip[i] = (random.randint(100, 255), random.randint(100, 255), random.randint(100, 255))
+            strip.show()
+            time.sleep(1 / speed)
+        strip.fill((0, 0, 0))
+        strip.show()
+
+    def hex_to_rgb(self, hex_color):
+        hex_color = hex_color.lstrip('#')
+        length = len(hex_color)
+        return tuple(int(hex_color[i:i + length // 3], 16) for i in range(0, length, length // 3))
 
 def wheel(pos):
     """Generate a color wheel."""
