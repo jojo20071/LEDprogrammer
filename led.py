@@ -60,7 +60,7 @@ class LEDStripApp:
         self.pattern_label.pack()
 
         self.pattern_var = tk.StringVar(value="Solid")
-        self.pattern_menu = tk.OptionMenu(self.root, self.pattern_var, "Solid", "Blink", "Chase", "Fade", "Cycle")
+        self.pattern_menu = tk.OptionMenu(self.root, self.pattern_var, "Solid", "Blink", "Chase", "Fade", "Cycle", "Pulse", "Rainbow", "Color Wave", "Starfield")
         self.pattern_menu.pack()
 
         self.speed_label = tk.Label(self.root, text="Speed")
@@ -81,13 +81,13 @@ class LEDStripApp:
         self.preview_canvas = tk.Canvas(self.root, width=300, height=50, bg='black')
         self.preview_canvas.pack()
 
+        self.strip_preview = tk.Canvas(self.root, width=300, height=100, bg='black')
+        self.strip_preview.pack()
+
         self.strip_count_label = tk.Label(self.root, text="Number of Strips")
         self.strip_count_label.pack()
         self.strip_count_entry = tk.Entry(self.root)
         self.strip_count_entry.pack()
-
-        self.strip_preview = tk.Canvas(self.root, width=300, height=100, bg='black')
-        self.strip_preview.pack()
 
     def start_program(self):
         try:
@@ -152,6 +152,23 @@ class LEDStripApp:
             for i in range(0, 300, 30):
                 cycle_color = "#{:02x}{:02x}{:02x}".format((i * 255 // 300) % 255, (255 - i * 255 // 300) % 255, (i * 2) % 255)
                 self.preview_canvas.create_rectangle(i, 0, i + 30, 50, fill=cycle_color)
+        elif pattern == "Pulse":
+            for i in range(0, 300, 30):
+                pulse_color = "#{:02x}{:02x}{:02x}".format(int(r * abs(1 - (i % 60) / 30)), int(g * abs(1 - (i % 60) / 30)), int(b * abs(1 - (i % 60) / 30)))
+                self.preview_canvas.create_rectangle(i, 0, i + 30, 50, fill=pulse_color)
+        elif pattern == "Rainbow":
+            for i in range(0, 300, 30):
+                rainbow_color = "#{:02x}{:02x}{:02x}".format((i * 255 // 300) % 255, (255 - (i * 255 // 300)) % 255, (i * 2) % 255)
+                self.preview_canvas.create_rectangle(i, 0, i + 30, 50, fill=rainbow_color)
+        elif pattern == "Color Wave":
+            wave_length = 50
+            for i in range(0, 300, wave_length):
+                wave_color = "#{:02x}{:02x}{:02x}".format((i // wave_length * 50) % 255, (255 - (i // wave_length * 50)) % 255, (i // wave_length * 30) % 255)
+                self.preview_canvas.create_rectangle(i, 0, i + wave_length, 50, fill=wave_color)
+        elif pattern == "Starfield":
+            for i in range(0, 300, 10):
+                star_color = "#{:02x}{:02x}{:02x}".format(random.randint(100, 255), random.randint(100, 255), random.randint(100, 255))
+                self.preview_canvas.create_rectangle(i, random.randint(0, 50), i + 10, random.randint(0, 50), fill=star_color)
 
     def update_strip_preview(self, color, pattern):
         self.strip_preview.delete("all")
@@ -176,6 +193,23 @@ class LEDStripApp:
             for i in range(self.num_strips):
                 cycle_color = "#{:02x}{:02x}{:02x}".format((i * 255 // self.num_strips) % 255, (255 - i * 255 // self.num_strips) % 255, (i * 2) % 255)
                 self.strip_preview.create_rectangle(i * strip_width, 0, (i + 1) * strip_width, 100, fill=cycle_color)
+        elif pattern == "Pulse":
+            for i in range(self.num_strips):
+                pulse_color = "#{:02x}{:02x}{:02x}".format(int(r * abs(1 - (i % 60) / 30)), int(g * abs(1 - (i % 60) / 30)), int(b * abs(1 - (i % 60) / 30)))
+                self.strip_preview.create_rectangle(i * strip_width, 0, (i + 1) * strip_width, 100, fill=pulse_color)
+        elif pattern == "Rainbow":
+            for i in range(self.num_strips):
+                rainbow_color = "#{:02x}{:02x}{:02x}".format((i * 255 // self.num_strips) % 255, (255 - (i * 255 // self.num_strips)) % 255, (i * 2) % 255)
+                self.strip_preview.create_rectangle(i * strip_width, 0, (i + 1) * strip_width, 100, fill=rainbow_color)
+        elif pattern == "Color Wave":
+            wave_length = 50
+            for i in range(self.num_strips):
+                wave_color = "#{:02x}{:02x}{:02x}".format((i * 50) % 255, (255 - (i * 50)) % 255, (i * 30) % 255)
+                self.strip_preview.create_rectangle(i * strip_width, 0, (i + 1) * strip_width, 100, fill=wave_color)
+        elif pattern == "Starfield":
+            for i in range(self.num_strips):
+                star_color = "#{:02x}{:02x}{:02x}".format(random.randint(100, 255), random.randint(100, 255), random.randint(100, 255))
+                self.strip_preview.create_rectangle(i * strip_width, random.randint(0, 100), (i + 1) * strip_width, random.randint(0, 100), fill=star_color)
 
     def apply_settings(self, color, brightness, pattern, speed, duration):
         for strip in self.pixels:
@@ -189,6 +223,14 @@ class LEDStripApp:
                 self.fade_pattern(strip, color, brightness, speed, duration)
             elif pattern == "Cycle":
                 self.cycle_pattern(strip, speed, duration)
+            elif pattern == "Pulse":
+                self.pulse_pattern(strip, color, brightness, speed, duration)
+            elif pattern == "Rainbow":
+                self.rainbow_pattern(strip, speed, duration)
+            elif pattern == "Color Wave":
+                self.color_wave_pattern(strip, speed, duration)
+            elif pattern == "Starfield":
+                self.starfield_pattern(strip, speed, duration)
 
     def save_config(self):
         if self.current_config:
@@ -275,10 +317,18 @@ class LEDStripApp:
         strip.fill((0, 0, 0))
         strip.show()
 
-    def hex_to_rgb(self, hex_color):
-        hex_color = hex_color.lstrip('#')
-        length = len(hex_color)
-        return tuple(int(hex_color[i:i + length // 3], 16) for i in range(0, length, length // 3))
+
+
+def wheel(pos):
+    """Generate a color wheel."""
+    if pos < 85:
+        return (pos * 3, 255 - pos * 3, 0)
+    elif pos < 170:
+        pos -= 85
+        return (255 - pos * 3, 0, pos * 3)
+    else:
+        pos -= 170
+        return (0, pos * 3, 255 - pos * 3)
 
 if __name__ == "__main__":
     root = tk.Tk()
