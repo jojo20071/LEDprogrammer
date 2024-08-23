@@ -41,7 +41,7 @@ class LEDStripApp:
         self.pattern_label.pack()
 
         self.pattern_var = tk.StringVar(value="Solid")
-        self.pattern_menu = tk.OptionMenu(self.root, self.pattern_var, "Solid", "Blink", "Chase")
+        self.pattern_menu = tk.OptionMenu(self.root, self.pattern_var, "Solid", "Blink", "Chase", "Fade", "Cycle")
         self.pattern_menu.pack()
 
         self.speed_label = tk.Label(self.root, text="Speed")
@@ -86,6 +86,10 @@ class LEDStripApp:
                 self.blink_pattern(strip, color, brightness, speed, duration)
             elif pattern == "Chase":
                 self.chase_pattern(strip, color, brightness, speed, duration)
+            elif pattern == "Fade":
+                self.fade_pattern(strip, color, brightness, speed, duration)
+            elif pattern == "Cycle":
+                self.cycle_pattern(strip, speed, duration)
 
     def save_config(self):
         if self.current_config:
@@ -133,6 +137,30 @@ class LEDStripApp:
             for i in range(len(strip)):
                 strip.fill((0, 0, 0))
                 strip[i] = (r, g, b)
+                strip.show()
+                time.sleep(1 / speed)
+        strip.fill((0, 0, 0))
+        strip.show()
+
+    def fade_pattern(self, strip, color, brightness, speed, duration):
+        r, g, b = self.hex_to_rgb(color)
+        r, g, b = int(r * brightness), int(g * brightness), int(b * brightness)
+        fade_steps = 100
+        step_delay = duration / fade_steps
+        for step in range(fade_steps):
+            intensity = int((step / fade_steps) * 255)
+            color_step = (intensity, intensity, intensity)
+            strip.fill(color_step)
+            strip.show()
+            time.sleep(step_delay)
+        strip.fill((0, 0, 0))
+        strip.show()
+
+    def cycle_pattern(self, strip, speed, duration):
+        end_time = time.time() + duration
+        while time.time() < end_time:
+            for color in range(0, 255, 5):
+                strip.fill((color, 255 - color, (color * 2) % 255))
                 strip.show()
                 time.sleep(1 / speed)
         strip.fill((0, 0, 0))
