@@ -3,14 +3,17 @@ from tkinter.colorchooser import askcolor
 import board
 import neopixel
 import time
+import json
+from tkinter import filedialog
 
 class LEDStripApp:
     def __init__(self, root):
         self.root = root
         self.root.title("LED Strip Programmer")
         self.create_widgets()
-
-        self.pixels = neopixel.NeoPixel(board.D18, 30, auto_write=False)
+        self.num_strips = 2
+        self.pixels = [neopixel.NeoPixel(board.D18, 30, auto_write=False) for _ in range(self.num_strips)]
+        self.current_config = {}
 
     def create_widgets(self):
         self.label = tk.Label(self.root, text="LED Strip Programmer")
@@ -18,6 +21,12 @@ class LEDStripApp:
 
         self.start_button = tk.Button(self.root, text="Start", command=self.start_program)
         self.start_button.pack()
+
+        self.save_button = tk.Button(self.root, text="Save Config", command=self.save_config)
+        self.save_button.pack()
+
+        self.load_button = tk.Button(self.root, text="Load Config", command=self.load_config)
+        self.load_button.pack()
 
         self.color_button = tk.Button(self.root, text="Pick Color", command=self.pick_color)
         self.color_button.pack()
@@ -54,6 +63,14 @@ class LEDStripApp:
         speed = self.speed_slider.get()
         duration = float(self.duration_entry.get())
 
+        config = {
+            'color': color,
+            'brightness': brightness,
+            'pattern': pattern,
+            'speed': speed,
+            'duration': duration
+        }
+        self.current_config = config
         self.apply_settings(color, brightness, pattern, speed, duration)
 
     def pick_color(self):
@@ -62,43 +79,64 @@ class LEDStripApp:
             self.color_button.config(bg=color)
 
     def apply_settings(self, color, brightness, pattern, speed, duration):
-        if pattern == "Solid":
-            self.solid_pattern(color, brightness)
-        elif pattern == "Blink":
-            self.blink_pattern(color, brightness, speed, duration)
-        elif pattern == "Chase":
-            self.chase_pattern(color, brightness, speed, duration)
+        for strip in self.pixels:
+            if pattern == "Solid":
+                self.solid_pattern(strip, color, brightness)
+            elif pattern == "Blink":
+                self.blink_pattern(strip, color, brightness, speed, duration)
+            elif pattern == "Chase":
+                self.chase_pattern(strip, color, brightness, speed, duration)
 
-    def solid_pattern(self, color, brightness):
+    def save_config(self):
+        if self.current_config:
+            file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
+            if file_path:
+                with open(file_path, 'w') as f:
+                    json.dump(self.current_config, f)
+
+    def load_config(self):
+        file_path = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
+        if file_path:
+            with open(file_path, 'r') as f:
+                config = json.load(f)
+                self.color_button.config(bg=config['color'])
+                self.brightness_slider.set(config['brightness'] * 100)
+                self.pattern_var.set(config['pattern'])
+                self.speed_slider.set(config['speed'])
+                self.duration_entry.delete(0, tk.END)
+                self.duration_entry.insert(0, config['duration'])
+                self.current_config = config
+
+    def solid_pattern(self, strip, color, brightness):
         r, g, b = self.hex_to_rgb(color)
         r, g, b = int(r * brightness), int(g * brightness), int(b * brightness)
-        self.pixels.fill((r, g, b))
-        self.pixels.show()
+        strip.fill((r, g, b))
+        strip.show()
 
-    def blink_pattern(self, color, brightness, speed, duration):
+    def blink_pattern(self, strip, color, brightness, speed, duration):
         r, g, b = self.hex_to_rgb(color)
         r, g, b = int(r * brightness), int(g * brightness), int(b * brightness)
         end_time = time.time() + duration
         while time.time() < end_time:
-            self.pixels.fill((r, g, b))
-            self.pixels.show()
+            strip.fill((r, g, b))
+            strip.show()
             time.sleep(1 / speed)
-            self.pixels.fill((0, 0, 0))
-            self.pixels.show()
+            strip.fill((0, 0, 0))
+            strip.show()
             time.sleep(1 / speed)
 
-    def chase_pattern(self, color, brightness, speed, duration):
+    def chase_pattern(self, strip, color, brightness, speed, duration):
         r, g, b = self.hex_to_rgb(color)
         r, g, b = int(r * brightness), int(g * brightness), int(b * brightness)
         end_time = time.time() + duration
         while time.time() < end_time:
-            for i in range(len(self.pixels)):
-                self.pixels.fill((0, 0, 0))
-                self.pixels[i] = (r, g, b)
-                self.pixels.show()
+            for i in range(len(strip)):
+                strip.fill((0, 0, 0))
+                strip[i] = (r, g, b)
+                strip.show()
                 time.sleep(1 / speed)
-        self.pixels.fill((0, 0, 0))
-        self.pixels.show()
+        strip.fill((0, 0, 0))
+        strip.show()
 
     def hex_to_rgb(self, hex_color):
         hex_color = hex_color.lstrip('#')
