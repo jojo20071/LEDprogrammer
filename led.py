@@ -4,6 +4,7 @@ import board
 import neopixel
 import time
 import json
+import random
 from tkinter import filedialog
 
 class LEDStripApp:
@@ -31,6 +32,24 @@ class LEDStripApp:
         self.color_button = tk.Button(self.root, text="Pick Color", command=self.pick_color)
         self.color_button.pack()
 
+        self.random_color_button = tk.Button(self.root, text="Random Color", command=self.random_color)
+        self.random_color_button.pack()
+
+        self.r_label = tk.Label(self.root, text="Red")
+        self.r_label.pack()
+        self.r_entry = tk.Entry(self.root)
+        self.r_entry.pack()
+
+        self.g_label = tk.Label(self.root, text="Green")
+        self.g_label.pack()
+        self.g_entry = tk.Entry(self.root)
+        self.g_entry.pack()
+
+        self.b_label = tk.Label(self.root, text="Blue")
+        self.b_label.pack()
+        self.b_entry = tk.Entry(self.root)
+        self.b_entry.pack()
+
         self.brightness_label = tk.Label(self.root, text="Brightness")
         self.brightness_label.pack()
         
@@ -56,27 +75,75 @@ class LEDStripApp:
         self.duration_entry = tk.Entry(self.root)
         self.duration_entry.pack()
 
+        self.preview_label = tk.Label(self.root, text="Pattern Preview")
+        self.preview_label.pack()
+
+        self.preview_canvas = tk.Canvas(self.root, width=200, height=50, bg='black')
+        self.preview_canvas.pack()
+
+        self.strip_count_label = tk.Label(self.root, text="Number of Strips")
+        self.strip_count_label.pack()
+        self.strip_count_entry = tk.Entry(self.root)
+        self.strip_count_entry.pack()
+
     def start_program(self):
+        try:
+            self.num_strips = int(self.strip_count_entry.get())
+        except ValueError:
+            self.num_strips = 2
+        self.pixels = [neopixel.NeoPixel(board.D18, 30, auto_write=False) for _ in range(self.num_strips)]
+        
         color = self.color_button.cget("bg")
+        r = int(self.r_entry.get() or 0)
+        g = int(self.g_entry.get() or 0)
+        b = int(self.b_entry.get() or 0)
         brightness = self.brightness_slider.get() / 100
         pattern = self.pattern_var.get()
         speed = self.speed_slider.get()
         duration = float(self.duration_entry.get())
+
+        if not color or (r == 0 and g == 0 and b == 0):
+            color = "#{:02x}{:02x}{:02x}".format(r, g, b)
 
         config = {
             'color': color,
             'brightness': brightness,
             'pattern': pattern,
             'speed': speed,
-            'duration': duration
+            'duration': duration,
+            'num_strips': self.num_strips
         }
         self.current_config = config
         self.apply_settings(color, brightness, pattern, speed, duration)
+        self.update_preview(color, pattern)
 
     def pick_color(self):
         color = askcolor()[1]
         if color:
             self.color_button.config(bg=color)
+
+    def random_color(self):
+        color = "#{:06x}".format(random.randint(0, 0xFFFFFF))
+        self.color_button.config(bg=color)
+
+    def update_preview(self, color, pattern):
+        self.preview_canvas.delete("all")
+        r, g, b = self.hex_to_rgb(color)
+        if pattern == "Solid":
+            self.preview_canvas.create_rectangle(0, 0, 200, 50, fill=color)
+        elif pattern == "Blink":
+            self.preview_canvas.create_rectangle(0, 0, 200, 50, fill=color)
+        elif pattern == "Chase":
+            for i in range(0, 200, 20):
+                self.preview_canvas.create_rectangle(i, 0, i + 20, 50, fill=color)
+        elif pattern == "Fade":
+            for i in range(0, 200, 20):
+                fade_color = "#{:02x}{:02x}{:02x}".format(int(r * i / 200), int(g * i / 200), int(b * i / 200))
+                self.preview_canvas.create_rectangle(i, 0, i + 20, 50, fill=fade_color)
+        elif pattern == "Cycle":
+            for i in range(0, 200, 20):
+                cycle_color = "#{:02x}{:02x}{:02x}".format((i * 255 // 200) % 255, (255 - i * 255 // 200) % 255, (i * 2) % 255)
+                self.preview_canvas.create_rectangle(i, 0, i + 20, 50, fill=cycle_color)
 
     def apply_settings(self, color, brightness, pattern, speed, duration):
         for strip in self.pixels:
@@ -109,7 +176,16 @@ class LEDStripApp:
                 self.speed_slider.set(config['speed'])
                 self.duration_entry.delete(0, tk.END)
                 self.duration_entry.insert(0, config['duration'])
+                self.r_entry.delete(0, tk.END)
+                self.r_entry.insert(0, self.hex_to_rgb(config['color'])[0])
+                self.g_entry.delete(0, tk.END)
+                self.g_entry.insert(0, self.hex_to_rgb(config['color'])[1])
+                self.b_entry.delete(0, tk.END)
+                self.b_entry.insert(0, self.hex_to_rgb(config['color'])[2])
+                self.strip_count_entry.delete(0, tk.END)
+                self.strip_count_entry.insert(0, config.get('num_strips', 2))
                 self.current_config = config
+                self.update_preview(config['color'], config['pattern'])
 
     def solid_pattern(self, strip, color, brightness):
         r, g, b = self.hex_to_rgb(color)
