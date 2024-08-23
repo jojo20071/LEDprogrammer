@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter.colorchooser import askcolor
 import board
 import neopixel
+import time
 
 class LEDStripApp:
     def __init__(self, root):
@@ -69,13 +70,40 @@ class LEDStripApp:
             self.chase_pattern(color, brightness, speed, duration)
 
     def solid_pattern(self, color, brightness):
-        pass
+        r, g, b = self.hex_to_rgb(color)
+        r, g, b = int(r * brightness), int(g * brightness), int(b * brightness)
+        self.pixels.fill((r, g, b))
+        self.pixels.show()
 
     def blink_pattern(self, color, brightness, speed, duration):
-        pass
+        r, g, b = self.hex_to_rgb(color)
+        r, g, b = int(r * brightness), int(g * brightness), int(b * brightness)
+        end_time = time.time() + duration
+        while time.time() < end_time:
+            self.pixels.fill((r, g, b))
+            self.pixels.show()
+            time.sleep(1 / speed)
+            self.pixels.fill((0, 0, 0))
+            self.pixels.show()
+            time.sleep(1 / speed)
 
     def chase_pattern(self, color, brightness, speed, duration):
-        pass
+        r, g, b = self.hex_to_rgb(color)
+        r, g, b = int(r * brightness), int(g * brightness), int(b * brightness)
+        end_time = time.time() + duration
+        while time.time() < end_time:
+            for i in range(len(self.pixels)):
+                self.pixels.fill((0, 0, 0))
+                self.pixels[i] = (r, g, b)
+                self.pixels.show()
+                time.sleep(1 / speed)
+        self.pixels.fill((0, 0, 0))
+        self.pixels.show()
+
+    def hex_to_rgb(self, hex_color):
+        hex_color = hex_color.lstrip('#')
+        length = len(hex_color)
+        return tuple(int(hex_color[i:i + length // 3], 16) for i in range(0, length, length // 3))
 
 if __name__ == "__main__":
     root = tk.Tk()
