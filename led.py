@@ -12,8 +12,8 @@ class LEDStripApp:
         self.root = root
         self.root.title("LED Strip Programmer")
         self.create_widgets()
-        self.num_strips = 2
-        self.pixels = [neopixel.NeoPixel(board.D18, 30, auto_write=False) for _ in range(self.num_strips)]
+        self.num_strips = 1
+        self.pixels = [neopixel.NeoPixel(board.D18, 30, auto_write=False)]
         self.current_config = {}
 
     def create_widgets(self):
@@ -78,7 +78,7 @@ class LEDStripApp:
         self.preview_label = tk.Label(self.root, text="Pattern Preview")
         self.preview_label.pack()
 
-        self.preview_canvas = tk.Canvas(self.root, width=200, height=50, bg='black')
+        self.preview_canvas = tk.Canvas(self.root, width=300, height=50, bg='black')
         self.preview_canvas.pack()
 
         self.strip_count_label = tk.Label(self.root, text="Number of Strips")
@@ -86,11 +86,18 @@ class LEDStripApp:
         self.strip_count_entry = tk.Entry(self.root)
         self.strip_count_entry.pack()
 
+        self.strip_preview = tk.Canvas(self.root, width=300, height=100, bg='black')
+        self.strip_preview.pack()
+
     def start_program(self):
         try:
-            self.num_strips = int(self.strip_count_entry.get())
+            num_strips = int(self.strip_count_entry.get())
+            if num_strips < 1:
+                raise ValueError("Number of strips must be at least 1")
+            self.num_strips = num_strips
         except ValueError:
-            self.num_strips = 2
+            self.num_strips = 1
+
         self.pixels = [neopixel.NeoPixel(board.D18, 30, auto_write=False) for _ in range(self.num_strips)]
         
         color = self.color_button.cget("bg")
@@ -116,6 +123,7 @@ class LEDStripApp:
         self.current_config = config
         self.apply_settings(color, brightness, pattern, speed, duration)
         self.update_preview(color, pattern)
+        self.update_strip_preview(color, pattern)
 
     def pick_color(self):
         color = askcolor()[1]
@@ -130,20 +138,44 @@ class LEDStripApp:
         self.preview_canvas.delete("all")
         r, g, b = self.hex_to_rgb(color)
         if pattern == "Solid":
-            self.preview_canvas.create_rectangle(0, 0, 200, 50, fill=color)
+            self.preview_canvas.create_rectangle(0, 0, 300, 50, fill=color)
         elif pattern == "Blink":
-            self.preview_canvas.create_rectangle(0, 0, 200, 50, fill=color)
+            self.preview_canvas.create_rectangle(0, 0, 300, 50, fill=color)
         elif pattern == "Chase":
-            for i in range(0, 200, 20):
-                self.preview_canvas.create_rectangle(i, 0, i + 20, 50, fill=color)
+            for i in range(0, 300, 30):
+                self.preview_canvas.create_rectangle(i, 0, i + 30, 50, fill=color)
         elif pattern == "Fade":
-            for i in range(0, 200, 20):
-                fade_color = "#{:02x}{:02x}{:02x}".format(int(r * i / 200), int(g * i / 200), int(b * i / 200))
-                self.preview_canvas.create_rectangle(i, 0, i + 20, 50, fill=fade_color)
+            for i in range(0, 300, 30):
+                fade_color = "#{:02x}{:02x}{:02x}".format(int(r * i / 300), int(g * i / 300), int(b * i / 300))
+                self.preview_canvas.create_rectangle(i, 0, i + 30, 50, fill=fade_color)
         elif pattern == "Cycle":
-            for i in range(0, 200, 20):
-                cycle_color = "#{:02x}{:02x}{:02x}".format((i * 255 // 200) % 255, (255 - i * 255 // 200) % 255, (i * 2) % 255)
-                self.preview_canvas.create_rectangle(i, 0, i + 20, 50, fill=cycle_color)
+            for i in range(0, 300, 30):
+                cycle_color = "#{:02x}{:02x}{:02x}".format((i * 255 // 300) % 255, (255 - i * 255 // 300) % 255, (i * 2) % 255)
+                self.preview_canvas.create_rectangle(i, 0, i + 30, 50, fill=cycle_color)
+
+    def update_strip_preview(self, color, pattern):
+        self.strip_preview.delete("all")
+        r, g, b = self.hex_to_rgb(color)
+        strip_width = 300 // self.num_strips
+        if pattern == "Solid":
+            for i in range(self.num_strips):
+                self.strip_preview.create_rectangle(i * strip_width, 0, (i + 1) * strip_width, 100, fill=color)
+        elif pattern == "Blink":
+            for i in range(self.num_strips):
+                fill_color = color if i % 2 == 0 else '#000000'
+                self.strip_preview.create_rectangle(i * strip_width, 0, (i + 1) * strip_width, 100, fill=fill_color)
+        elif pattern == "Chase":
+            for i in range(self.num_strips):
+                fill_color = color if i == (int(time.time()) % self.num_strips) else '#000000'
+                self.strip_preview.create_rectangle(i * strip_width, 0, (i + 1) * strip_width, 100, fill=fill_color)
+        elif pattern == "Fade":
+            for i in range(self.num_strips):
+                fade_color = "#{:02x}{:02x}{:02x}".format(int(r * i / self.num_strips), int(g * i / self.num_strips), int(b * i / self.num_strips))
+                self.strip_preview.create_rectangle(i * strip_width, 0, (i + 1) * strip_width, 100, fill=fade_color)
+        elif pattern == "Cycle":
+            for i in range(self.num_strips):
+                cycle_color = "#{:02x}{:02x}{:02x}".format((i * 255 // self.num_strips) % 255, (255 - i * 255 // self.num_strips) % 255, (i * 2) % 255)
+                self.strip_preview.create_rectangle(i * strip_width, 0, (i + 1) * strip_width, 100, fill=cycle_color)
 
     def apply_settings(self, color, brightness, pattern, speed, duration):
         for strip in self.pixels:
@@ -183,9 +215,10 @@ class LEDStripApp:
                 self.b_entry.delete(0, tk.END)
                 self.b_entry.insert(0, self.hex_to_rgb(config['color'])[2])
                 self.strip_count_entry.delete(0, tk.END)
-                self.strip_count_entry.insert(0, config.get('num_strips', 2))
+                self.strip_count_entry.insert(0, config.get('num_strips', 1))
                 self.current_config = config
                 self.update_preview(config['color'], config['pattern'])
+                self.update_strip_preview(config['color'], config['pattern'])
 
     def solid_pattern(self, strip, color, brightness):
         r, g, b = self.hex_to_rgb(color)
