@@ -2,6 +2,8 @@
 
 This Python script provides functionalities to control an LED, enabling various lighting effects such as blinking, fading, or constant illumination. It is intended for use in projects that require basic LED management. The script is straightforward to configure, making it easy to integrate into different hardware setups.
 
+![image](https://github.com/user-attachments/assets/dda7c6c0-d5d2-4b55-adc3-34e923f666a2)
+
 ### Features
 - **Blinking**: Make the LED blink at a specified frequency.
 - **Fading**: Gradually increase or decrease the LED brightness.
